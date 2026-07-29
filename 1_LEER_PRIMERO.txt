@@ -1,0 +1,64 @@
+=================================================================
+   SUBIR LA WEB A INTERNET GRATIS (para usar desde el celular)
+=================================================================
+
+Al terminar tendra un LINK que abre desde cualquier celular
+o computador, sin instalar nada. Ejemplo:
+   https://resoluciones-mce.onrender.com
+
+Se hace UNA sola vez. Toma unos 15 minutos.
+Necesita: un correo electronico.
+
+=================================================================
+ PARTE 1 - CREAR CUENTA EN GITHUB (guardar los archivos)
+=================================================================
+1. Entre a:  https://github.com
+2. Clic en "Sign up". Cree la cuenta con su correo.
+3. Ya dentro, clic en el "+" (arriba a la derecha) -> "New repository".
+4. En "Repository name" escriba:  resoluciones-mce
+5. Marque la opcion "Public".
+6. Clic en "Create repository".
+7. En la pagina que sigue, clic en el enlace:
+   "uploading an existing file".
+8. Arrastre TODOS los archivos de esta carpeta WEB_ONLINE
+   (incluida la carpeta "plantillas").
+   * Importante: suba tambien la carpeta plantillas completa.
+9. Abajo clic en "Commit changes".
+
+=================================================================
+ PARTE 2 - PUBLICAR EN RENDER (que funcione el link)
+=================================================================
+1. Entre a:  https://render.com
+2. Clic en "Get Started" e ingrese CON su cuenta de GitHub
+   (boton "GitHub"). Autorice el acceso.
+3. En el panel, clic en "New +" -> "Web Service".
+4. Busque y seleccione su repositorio "resoluciones-mce".
+   Clic en "Connect".
+5. Render llena casi todo solo. Verifique:
+      - Language / Runtime:  Python 3
+      - Build Command:   pip install -r requirements.txt
+      - Start Command:   gunicorn app:app
+6. En "Instance Type" elija el plan GRATIS ("Free").
+7. Clic en "Create Web Service" (o "Deploy").
+8. Espere unos 3-5 minutos (aparece "Live" en verde arriba).
+9. Arriba vera el LINK de su web, algo como:
+      https://resoluciones-mce.onrender.com
+
+=================================================================
+ PARTE 3 - USARLO EN EL CELULAR
+=================================================================
+1. Abra ese link en el navegador del celular.
+2. Guardelo en favoritos (o agreguelo a la pantalla de inicio).
+3. Llene el formulario y toque "Descargar Word".
+   El archivo queda en la carpeta Descargas del celular.
+
+=================================================================
+ NOTA sobre el plan gratis de Render
+=================================================================
+- Si nadie lo usa por un rato, "se duerme". La PRIMERA vez que
+  entre despues de un tiempo puede tardar ~30 segundos en abrir.
+  Luego va rapido. Es normal en el plan gratis.
+- Cuando yo le mande mejoras nuevas, solo tiene que volver a
+  subir los archivos cambiados a GitHub (Parte 1, pasos 7-9) y
+  Render se actualiza solo.
+=================================================================
