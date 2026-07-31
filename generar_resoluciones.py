@@ -16,7 +16,9 @@ from docx import Document
 
 W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 def seleccionar_plantilla(tramite, est):
-    if tramite == 'AMPL':
+    if tramite == 'AMPL_MULT':
+        return 'plantillas/TPL_AMPL_MULT.docx'
+    elif tramite == 'AMPL':
         if est == 'MAY':
             return 'plantillas/TPL_AMPL_MAYORISTA.docx'
         elif est in ('IPS-P', 'IPS-G'):
@@ -134,6 +136,29 @@ def generar(registro, salida):
     # Tratamiento por calidad (heurística simple)
     ctx.setdefault('tratamiento', 'el/la señor(a)')
 
+    # PARA AMPL_MULT: Generar articulo_genero y resoluciones_anteriores ANTES de procesar párrafos
+    if tramite == 'AMPL_MULT':
+        # articulo_genero: usar el campo tratamiento directamente
+        ctx['articulo_genero'] = registro.get('tratamiento', 'el señor')
+        
+        # resoluciones_anteriores: generar desde sucursales
+        sucursales_json = registro.get('sucursales', '')
+        sucursales_list = []
+        try:
+            if sucursales_json:
+                sucursales_list = json.loads(sucursales_json) if isinstance(sucursales_json, str) else sucursales_json
+        except:
+            pass
+        
+        # Generar lista de resoluciones
+        resoluciones = []
+        for s in sucursales_list:
+            res_num = s.get('res_num', '').strip()
+            res_fecha = s.get('res_fecha', '').strip()
+            if res_num and res_fecha:
+                resoluciones.append(f"{res_num} de {res_fecha}")
+        ctx['resoluciones_anteriores'] = ', '.join(resoluciones)
+
     # Parsear MCE
     mce = []
     for linea in registro.get('mce', '').strip().split('\n'):
@@ -174,6 +199,9 @@ def generar(registro, salida):
     for tbl in d.tables:
         if not es_tabla_mce(tbl):
             continue
+        # NO procesar tablas MCE si es AMPL_MULT (se procesan después)
+        if tramite == 'AMPL_MULT':
+            continue
         antes = texto_antes(tbl)
         es_mono = ('MONOPOLIO' in antes) or ('PROHIBIDA' in antes)
         datos = mono if es_mono else mce
@@ -183,6 +211,79 @@ def generar(registro, salida):
             # Sin datos: dejar solo el encabezado
             for row in list(tbl.rows[1:]):
                 row._tr.getparent().remove(row._tr)
+
+    # SOPORTE PARA AMPL_MULT: Llenar tablas dinámicas de medicamentos y sucursales
+    if tramite == 'AMPL_MULT':
+        # Parsear sucursales
+        sucursales = []
+        try:
+            sucursales_json = registro.get('sucursales', '')
+            if sucursales_json:
+                sucursales = json.loads(sucursales_json) if isinstance(sucursales_json, str) else sucursales_json
+        except:
+            pass
+        
+        # Llenar tablas de sucursales
+        def es_tabla_sucursales(tbl):
+            if len(tbl.rows) < 1:
+                return False
+            header = ' '.join([c.text.strip().upper() for c in tbl.rows[0].cells])
+            return 'ESTABLECIMIENTO' in header or 'NOMBRE DEL' in header
+        
+        def fill_sucursal_row(row, sucursal):
+            cells = row.cells
+            if len(cells) >= 5:
+                cells[0].text = sucursal.get('nombre', '')
+                cells[1].text = sucursal.get('direccion', '')
+                cells[2].text = sucursal.get('municipio', '')
+                cells[3].text = sucursal.get('dt', '')
+                cells[4].text = f"{sucursal.get('res_num', '')} de {sucursal.get('res_fecha', '')}"
+        
+        for tbl in d.tables:
+            if not es_tabla_sucursales(tbl):
+                continue
+            if len(tbl.rows) > 1 and sucursales:
+                plantilla_row = deepcopy(tbl.rows[1]._element)
+                for row in list(tbl.rows[1:]):
+                    row._element.getparent().remove(row._element)
+                for sucursal in sucursales:
+                    new_row_elem = deepcopy(plantilla_row)
+                    tbl._element.append(new_row_elem)
+                    new_row = tbl.rows[-1]
+                    fill_sucursal_row(new_row, sucursal)
+        
+        # Llenar tablas de medicamentos AMPL_MULT (puede haber múltiples tablas de medicamentos)
+        def es_tabla_mce_ampl_mult(tbl):
+            if len(tbl.rows) < 1:
+                return False
+            # Detección robusta: buscar "FORMA" en los encabezados y exactamente 3 columnas
+            header = [c.text.strip().upper() for c in tbl.rows[0].cells]
+            header_str = ' '.join(header)
+            # Si tiene 3 columnas y una contiene "FORMA", es tabla de medicamentos
+            return len(header) == 3 and 'FORMA' in header_str
+        
+        def fill_med_row_ampl(row, med):
+            cells = row.cells
+            if len(cells) >= 3:
+                cells[0].text = med.get('nombre', '')
+                cells[1].text = med.get('concentracion', '')
+                cells[2].text = med.get('forma', '')
+        
+        for tbl in d.tables:
+            if not es_tabla_mce_ampl_mult(tbl):
+                continue
+            if len(tbl.rows) > 1 and mce:
+                # Guardar plantilla de fila
+                plantilla_row = deepcopy(tbl.rows[1]._element)
+                # Eliminar filas de datos anteriores
+                for row in list(tbl.rows[1:]):
+                    row._element.getparent().remove(row._element)
+                # Insertar filas nuevas
+                for med in mce:
+                    new_row_elem = deepcopy(plantilla_row)
+                    tbl._element.append(new_row_elem)
+                    new_row = tbl.rows[-1]
+                    fill_med_row_ampl(new_row, med)
 
     # Lista de documentos numerada — SOLO en el considerando SEGUNDO (allegó documentos)
     docs_raw = registro.get('documentos', '')
