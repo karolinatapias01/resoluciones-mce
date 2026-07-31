@@ -160,6 +160,11 @@ header p{font-size:11px;opacity:.85;margin-top:2px}
 <div class="f"><label>Correo electronico para notificacion</label><input type="text" id="correo"></div>
 </div>
 
+<div class="sec">FECHA DE LA RESOLUCIÓN</div>
+<div class="row one">
+<div class="f"><label>Fecha de expedición *</label><input type="text" id="fecha_resolucion" placeholder="19 de junio de 2026"></div>
+</div>
+
 <div class="sec" id="secResPrevia">RESOLUCION</div>
 <div class="row three" id="wrapResPrevia">
 <div class="f"><label>N&deg; resolucion previa</label><input type="text" id="res_previa_num" placeholder="18764"></div>
@@ -238,6 +243,33 @@ header p{font-size:11px;opacity:.85;margin-top:2px}
 </div>
 </div>
 
+<div class="panel hidden" id="panelSucursales">
+<div class="panel-head">PASO 5 &mdash; Establecimientos (Sucursales)</div>
+<div class="panel-body">
+<div class="note">Agregue los establecimientos a los que se ampliará la autorización.</div>
+
+<div class="sec">AGREGAR SUCURSAL</div>
+<div class="row">
+<div class="f"><label>Nombre del establecimiento *</label><input type="text" id="suc_nombre" placeholder="Offimedicas Cabecera"></div>
+<div class="f"><label>Dirección *</label><input type="text" id="suc_direccion" placeholder="Carrera 33 # 46 - 49"></div>
+</div>
+<div class="row">
+<div class="f"><label>Municipio *</label><input type="text" id="suc_municipio" placeholder="Bucaramanga"></div>
+<div class="f"><label>Nombre director técnico *</label><input type="text" id="suc_dt" placeholder="Martha Viviana Sánchez Ríos"></div>
+</div>
+<div class="row">
+<div class="f"><label>N° resolución anterior *</label><input type="text" id="suc_res_num" placeholder="08203"></div>
+<div class="f"><label>Fecha resolución *</label><input type="text" id="suc_res_fecha" placeholder="29 de abril de 2022"></div>
+</div>
+<div class="row one">
+<button type="button" class="btn green" style="width:100%" onclick="agregarSucursal()">+ Agregar esta sucursal</button>
+</div>
+
+<div class="sec">SUCURSALES AGREGADAS</div>
+<div id="tablaSucursales"></div>
+</div>
+</div>
+
 <div class="panel" id="panelVisita">
 <div class="panel-head">PASO 5 &mdash; Visita de verificacion</div>
 <div class="panel-body">
@@ -270,6 +302,7 @@ header p{font-size:11px;opacity:.85;margin-top:2px}
 
 <script>
 var TIPOS=[
+{id:"AMPL_MULT",ic:"\uD83C\uDFE2",t:"Ampliacion Grupal",s:"Multiples sucursales",tag:"INCLUSION",tc:"inc",tramite:"AMPL_MULT",est:"MAY",hint:"Ampliacion de MCE a multiples establecimientos de la misma empresa."},
 {id:"AMPL_MAY",ic:"\uD83D\uDCE6",t:"Inclusion Mayoristas",s:"Ampliacion MCE",tag:"INCLUSION",tc:"inc",tramite:"AMPL",est:"MAY",hint:"Ampliacion de MCE para distribuidores mayoristas."},
 {id:"MODDT",ic:"\u270F\uFE0F",t:"Cambio DT + MCE",s:"Director + meds",tag:"MODIFICACION",tc:"mod",tramite:"MOD-DT",est:"DROG",hint:"Cambio del director tecnico mas ampliacion opcional de MCE."},
 {id:"MODVAR",ic:"\uD83D\uDD27",t:"Varias Modificaciones",s:"Nombre/DT/MCE",tag:"MODIFICACION",tc:"mod",tramite:"MOD-VAR",est:"MAY",hint:"Cambio de nombre, director tecnico e inclusion de medicamentos."},
@@ -348,6 +381,7 @@ function pickTipo(i){
   document.getElementById('wrapFechaTitulo').classList.toggle('hidden', !(tr==='INSC'||tr==='RENOV'));
   document.getElementById('panelMCE').classList.toggle('hidden', tr==='ACLARA');
   document.getElementById('panelVisita').classList.toggle('hidden', tr==='ACLARA');
+  document.getElementById('panelSucursales').classList.toggle('hidden', tr!=='AMPL_MULT');
   document.getElementById('wrapAclara').classList.toggle('hidden', tr!=='ACLARA');
   var esInsc=(tr==='INSC');
   document.getElementById('secResPrevia').style.display=esInsc?'none':'block';
@@ -502,6 +536,66 @@ function autoTrato(){
   else if(c.indexOf('Director')>=0) document.getElementById('tratamiento').value='el se\u00F1or';
 }
 
+// PARA AMPLIACIÓN MÚLTIPLE
+var sucursales = [];
+function renderSucursales(){
+  var html='';
+  if(sucursales.length===0){
+    html='<p style="color:#999;font-size:12px;padding:10px">Sin sucursales agregadas</p>';
+  } else {
+    html='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html+='<tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px">Establecimiento</th><th style="border:1px solid #ccc;padding:6px">Dirección</th><th style="border:1px solid #ccc;padding:6px">Municipio</th><th style="border:1px solid #ccc;padding:6px">Director Técnico</th><th style="border:1px solid #ccc;padding:6px">Res. Anterior</th><th style="border:1px solid #ccc;padding:6px">Acción</th></tr>';
+    for(var i=0;i<sucursales.length;i++){
+      var s=sucursales[i];
+      html+='<tr><td style="border:1px solid #ddd;padding:6px">'+s.nombre+'</td><td style="border:1px solid #ddd;padding:6px">'+s.direccion+'</td><td style="border:1px solid #ddd;padding:6px">'+s.municipio+'</td><td style="border:1px solid #ddd;padding:6px">'+s.dt+'</td><td style="border:1px solid #ddd;padding:6px">'+s.res_num+' de '+s.res_fecha+'</td><td style="border:1px solid #ddd;padding:6px"><button onclick="eliminarSucursal('+i+')" style="font-size:9px;padding:2px 6px;background:#b91c1c;color:#fff;border:none;border-radius:3px;cursor:pointer">Eliminar</button></td></tr>';
+    }
+    html+='</table>';
+  }
+  document.getElementById('tablaSucursales').innerHTML=html;
+}
+
+function agregarSucursal(){
+  var nombre=document.getElementById('suc_nombre').value.trim();
+  var direccion=document.getElementById('suc_direccion').value.trim();
+  var municipio=document.getElementById('suc_municipio').value.trim();
+  var dt=document.getElementById('suc_dt').value.trim();
+  var res_num=document.getElementById('suc_res_num').value.trim();
+  var res_fecha=document.getElementById('suc_res_fecha').value.trim();
+  
+  if(!nombre||!direccion||!municipio||!dt||!res_num||!res_fecha){
+    alert('Complete todos los campos de la sucursal');
+    return;
+  }
+  
+  sucursales.push({nombre:nombre,direccion:direccion,municipio:municipio,dt:dt,res_num:res_num,res_fecha:res_fecha});
+  
+  // Limpiar campos
+  document.getElementById('suc_nombre').value='';
+  document.getElementById('suc_direccion').value='';
+  document.getElementById('suc_municipio').value='';
+  document.getElementById('suc_dt').value='';
+  document.getElementById('suc_res_num').value='';
+  document.getElementById('suc_res_fecha').value='';
+  
+  renderSucursales();
+}
+
+function eliminarSucursal(i){
+  sucursales.splice(i,1);
+  renderSucursales();
+}
+
+function mostrarPanelSucursales(){
+  var tipo=tipoSel?tipoSel.tramite:'';
+  var panel=document.getElementById('panelSucursales');
+  if(tipo==='AMPL_MULT'){
+    panel.style.display='block';
+  } else {
+    panel.style.display='none';
+    sucursales=[];
+  }
+}
+
 function armarRegistro(){
   if(!tipoSel){ alert('Seleccione el tipo de resolucion en el PASO 1.'); return null; }
   var g=function(id){var e=document.getElementById(id);return e?e.value:'';};
@@ -524,9 +618,11 @@ function armarRegistro(){
     dt_tratamiento:g('dt_tratamiento'), dt_fecha_titulo:g('dt_fecha_titulo'), dt_vigencia:g('dt_vigencia'),
     res_previa_num:g('res_previa_num'), res_previa_fecha:g('res_previa_fecha'), forest:g('forest_proceso'),
     visita_fecha:g('visita_fecha'), visita_funcionario:g('visita_funcionario'), visita_cargo:g('visita_cargo'),
+    fecha_resolucion:g('fecha_resolucion'),
     mce:medsSel.join('\n'),
     documentos:getDocs().join('\n'),
-    mce_monopolio:monoSel.join('\n')
+    mce_monopolio:monoSel.join('\n'),
+    sucursales:tipoSel.tramite==='AMPL_MULT'?JSON.stringify(sucursales):''
   };
   var canal=g('canal');
   r.canal=canal;
@@ -561,13 +657,28 @@ function borrarReg(i){
 }
 
 function generarYDescargar(ev){
-  var lote=registros.slice();
   var actual=armarRegistro();
-  if(actual && actual.nombre_est){
-    var dup=false;
-    for(var i=0;i<lote.length;i++){ if(JSON.stringify(lote[i])===JSON.stringify(actual)) dup=true; }
-    if(!dup) lote.push(actual);
+  if(!actual){ alert('Diligencie los datos.'); return; }
+  
+  var lote=[];
+  
+  // Para AMPL_MULT: generar UN SOLO documento con todas las sucursales
+  if(actual.tramite === 'AMPL_MULT'){
+    if(!sucursales || sucursales.length === 0){
+      alert('Agregue al menos una sucursal.');
+      return;
+    }
+    lote=[actual];  // UN SOLO registro
+  } else {
+    // Para otros tipos: incluir registros guardados + actual
+    lote=registros.slice();
+    if(actual && actual.nombre_est){
+      var dup=false;
+      for(var i=0;i<lote.length;i++){ if(JSON.stringify(lote[i])===JSON.stringify(actual)) dup=true; }
+      if(!dup) lote.push(actual);
+    }
   }
+  
   if(lote.length===0){ alert('Diligencie los datos del establecimiento.'); return; }
   var b=ev.target; b.disabled=true; b.textContent='Generando...';
   fetch('/api/generar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lote)})
@@ -585,6 +696,12 @@ function generarYDescargar(ev){
     var a=document.createElement('a'); a.href=url; a.download=o.nombre; a.click();
     window.URL.revokeObjectURL(url);
     b.disabled=false; b.textContent='Descargar Word';
+    
+    // Limpiar sucursales si es AMPL_MULT
+    if(actual.tramite === 'AMPL_MULT'){
+      sucursales=[];
+      renderSucursales();
+    }
   })
   .catch(function(e){ alert('Error: '+e.message); b.disabled=false; b.textContent='Descargar Word'; });
 }
